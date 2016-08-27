@@ -56,6 +56,5 @@ defmodule Machina.Stadium do
   end
   defp update_player(player, _, _), do: player
 
-
   defp game_id(game_id), do: :"game_#{game_id}"
 end
