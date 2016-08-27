@@ -1,5 +1,6 @@
 defmodule Machina.GameAssigner do
   use GenServer
+  @timeout_peroid 30
 
   def start_link(scope) do
     GenServer.start_link(__MODULE__, scope, [name: context(scope)])
@@ -30,7 +31,8 @@ defmodule Machina.GameAssigner do
   def handle_info(:assign_games, state) do
     IO.inspect(state)
 
-    with {:ok, new_players, game} <- create_game(state)
+    with {:ok, :waiting} <- check_timeout_period(state),
+         {:ok, new_players, game} <- create_game(state)
     do
       StadiumWeb.Endpoint.broadcast("lobby:game_assigner", "game_offer", game)
 
@@ -38,8 +40,22 @@ defmodule Machina.GameAssigner do
     else
       {:error, :no_players} ->
         {:stop, :normal, state}
+      {:error, :timeout_expired} ->
+        StadiumWeb.Endpoint.broadcast("lobby:game_assigner", "game_reject", %{})
+
+        {:stop, :normal, state}
       _ ->
         {:noreply, state}
+    end
+  end
+
+  defp check_timeout_period(state) do
+    last_join_time = List.last(state.waiting_players).join_time
+    age = current_time - last_join_time
+    if age > @timeout_peroid do
+      {:error, :timeout_expired}
+    else
+      {:ok, :waiting}
     end
   end
 
@@ -80,7 +96,7 @@ defmodule Machina.GameAssigner do
   def handle_call({:add_player, player_id}, _from, state) do
     new_state =
       %{state |
-        waiting_players: Enum.uniq(state.waiting_players ++ [player_id]),
+        waiting_players: Enum.uniq(state.waiting_players ++ [%{join_time: current_time, player_id: player_id}]),
         had_players: true
       }
 
@@ -88,4 +104,6 @@ defmodule Machina.GameAssigner do
   end
 
   defp context(scope), do: :"context:#{scope}"
+
+  def current_time, do: DateTime.utc_now() |> DateTime.to_unix()
 end
