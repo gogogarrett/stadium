@@ -1,14 +1,14 @@
-defmodule Machina.StadiumGameSup do
+defmodule Machina.GameAssignerSup do
   use Supervisor
-  alias Machina.Stadium
+  alias Machina.GameAssigner
 
-  def add_game(game_id) do
+  def add_assigner(game_id) do
     Supervisor.start_child(__MODULE__, [game_id])
   end
 
-  def find_game(game_id) do
+  def find_assigner(game_id) do
     Enum.find games, fn(child) ->
-      Stadium.name(child) == game_id
+      GameAssigner.name(child) == game_id
     end
   end
 
@@ -27,7 +27,7 @@ defmodule Machina.StadiumGameSup do
 
   def init(:ok) do
     [
-      worker(Stadium, [])
+      worker(GameAssigner, [], restart: :temporary)
     ]
     |> supervise(strategy: :simple_one_for_one)
   end

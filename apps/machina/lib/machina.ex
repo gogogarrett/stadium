@@ -7,6 +7,7 @@ defmodule Machina do
     # worker(Machina.Stadium, []),
     children = [
       supervisor(Machina.StadiumGameSup, []),
+      supervisor(Machina.GameAssignerSup, []),
     ]
 
     opts = [strategy: :one_for_one, name: Machina.Supervisor]

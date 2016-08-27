@@ -1,5 +1,4 @@
 defmodule StadiumWeb.GameChannel do
-  require IEx
   use StadiumWeb.Web, :channel
 
   def join("game:" <> game_id, _payload, socket) do
@@ -7,7 +6,6 @@ defmodule StadiumWeb.GameChannel do
 
     socket =
       socket
-      |> assign(:game_id, game_id)
       |> assign(:game_pid, game)
 
 
@@ -41,9 +39,8 @@ defmodule StadiumWeb.GameChannel do
   end
 
   defp find_or_create_game(game_name) do
-    with game when is_pid(game) <- Machina.StadiumGameSup.find_game(game_name)
-    do game
-    else
+    case Machina.StadiumGameSup.find_game(game_name) do
+      game when is_pid(game) -> game
       _ ->
         {:ok, game} = Machina.StadiumGameSup.add_game(game_name)
         game
