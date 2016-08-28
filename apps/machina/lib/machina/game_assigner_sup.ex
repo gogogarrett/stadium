@@ -27,7 +27,7 @@ defmodule Machina.GameAssignerSup do
 
   def init(:ok) do
     [
-      worker(GameAssigner, [], restart: :temporary)
+      worker(GameAssigner, [], restart: :transient)
     ]
     |> supervise(strategy: :simple_one_for_one)
   end

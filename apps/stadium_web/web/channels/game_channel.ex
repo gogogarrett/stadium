@@ -17,7 +17,7 @@ defmodule StadiumWeb.GameChannel do
   def handle_info(:after_join, socket) do
     game_state =
       socket.assigns.game_pid
-      |> Machina.Stadium.fetch_state
+      |> Machina.StadiumGame.fetch_state
 
     send_game_state(socket, game_state)
 
@@ -27,7 +27,7 @@ defmodule StadiumWeb.GameChannel do
   def handle_in("submit_answer", payload, socket) do
     game_state =
       socket.assigns.game_pid
-      |> Machina.Stadium.update_state(socket.assigns.user_id, payload)
+      |> Machina.StadiumGame.update_state(socket.assigns.user_id, payload)
 
     send_game_state(socket, game_state)
 

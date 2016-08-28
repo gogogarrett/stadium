@@ -1,4 +1,4 @@
-defmodule Machina.Stadium do
+defmodule Machina.StadiumGame do
   use GenServer
 
   def start_link(game_id) do
@@ -17,33 +17,49 @@ defmodule Machina.Stadium do
     GenServer.call(pid, {:update_state, user_id, score})
   end
 
+  def add_players(pid, players) do
+    GenServer.call(pid, {:add_players, players})
+  end
+
   def init(game_id) do
     {:ok, %{
       game_id: game_id,
-      game_state: %{
-        players: [
-          %{id: "1", score: 0},
-          %{id: "2", score: 0},
-          %{id: "3", score: 0},
-          %{id: "4", score: 0},
-        ]
-      }
-    }}
+      game_state: %{players: []}
+    }, 5_000}
+  end
+
+  def handle_info(:timeout, state) do
+    IO.inspect("handle_info: timeout")
+
+    StadiumWeb.Endpoint.broadcast("game:#{state.game_id}", "game_end", state)
+
+    {:stop, :normal, state}
   end
 
   def handle_call(:name, _from, state) do
-    {:reply, state.game_id, state}
+    {:reply, state.game_id, state, 5_000}
   end
 
   def handle_call(:fetch_state, _from, state) do
-    {:reply, state, state}
+    {:reply, state, state, 5_000}
+  end
+
+  def handle_call({:add_players, players}, _from, state) do
+    player_maps =
+      Enum.map(players, fn(player) ->
+        %{id: player.player_id, score: 0}
+      end)
+
+    new_state = put_in(state, [:game_state, :players], Enum.uniq(player_maps))
+
+    {:reply, new_state, new_state, 5_000}
   end
 
   def handle_call({:update_state, user_id, score}, _from, %{game_state: game_state} = state) do
     updated_players = update_players(game_state.players, user_id, score)
     new_state = put_in(state, [:game_state, :players], updated_players)
 
-    {:reply, new_state, new_state}
+    {:reply, new_state, new_state, 5_000}
   end
 
   def update_players(players, user_id, score) do

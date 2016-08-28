@@ -1,6 +1,6 @@
 defmodule Machina.StadiumGameSup do
   use Supervisor
-  alias Machina.Stadium
+  alias Machina.StadiumGame
 
   def add_game(game_id) do
     Supervisor.start_child(__MODULE__, [game_id])
@@ -8,7 +8,7 @@ defmodule Machina.StadiumGameSup do
 
   def find_game(game_id) do
     Enum.find games, fn(child) ->
-      Stadium.name(child) == game_id
+      StadiumGame.name(child) == game_id
     end
   end
 
@@ -27,7 +27,7 @@ defmodule Machina.StadiumGameSup do
 
   def init(:ok) do
     [
-      worker(Stadium, [])
+      worker(StadiumGame, [], restart: :transient)
     ]
     |> supervise(strategy: :simple_one_for_one)
   end

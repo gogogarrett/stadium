@@ -1,6 +1,7 @@
 defmodule Machina.GameAssigner do
   use GenServer
-  @timeout_peroid 30
+
+  alias Machina.GameAssigner.{Timeout, GameFactory}
 
   def start_link(scope) do
     GenServer.start_link(__MODULE__, scope, [name: context(scope)])
@@ -31,8 +32,8 @@ defmodule Machina.GameAssigner do
   def handle_info(:assign_games, state) do
     IO.inspect(state)
 
-    with {:ok, :waiting} <- check_timeout_period(state),
-         {:ok, new_players, game} <- create_game(state)
+    with {:ok, :waiting} <- Timeout.check(state.waiting_players),
+         {:ok, new_players, game} <- GameFactory.build(state)
     do
       StadiumWeb.Endpoint.broadcast("lobby:game_assigner", "game_offer", game)
 
@@ -41,48 +42,19 @@ defmodule Machina.GameAssigner do
       {:error, :no_players} ->
         {:stop, :normal, state}
       {:error, :timeout_expired} ->
-        StadiumWeb.Endpoint.broadcast("lobby:game_assigner", "game_reject", %{})
-
-        {:stop, :normal, state}
+        new_players = case Enum.count(state.waiting_players) do
+          count when count in [2, 3] ->
+            {:ok, new_players, game} = GameFactory.build_with_droids(state)
+            StadiumWeb.Endpoint.broadcast("lobby:game_assigner", "game_offer", game)
+            new_players
+          _ ->
+            StadiumWeb.Endpoint.broadcast("lobby:game_assigner", "game_reject", %{})
+            []
+        end
+        {:stop, :normal, Map.update!(state, :waiting_players, fn (_x) -> new_players end)}
       _ ->
         {:noreply, state}
     end
-  end
-
-  defp check_timeout_period(state) do
-    last_join_time = List.last(state.waiting_players).join_time
-    age = current_time - last_join_time
-    if age > @timeout_peroid do
-      {:error, :timeout_expired}
-    else
-      {:ok, :waiting}
-    end
-  end
-
-  defp create_game(%{waiting_players: waiting_players} = state)
-    when length(waiting_players) >= 4 do
-
-    new_players = Enum.drop(waiting_players, 4)
-
-    {:ok, new_players, %{
-        game_id: 1,
-        players: waiting_players,
-        questions: [
-          "how are you",
-          "what's up",
-          "where am i"
-        ]
-      }
-    }
-  end
-
-  defp create_game(%{waiting_players: waiting_players, had_players: true})
-    when length(waiting_players) == 0 do
-    {:error, :no_players}
-  end
-
-  defp create_game(state) do
-    {:error, :not_started}
   end
 
   def handle_call(:name, _from, state) do

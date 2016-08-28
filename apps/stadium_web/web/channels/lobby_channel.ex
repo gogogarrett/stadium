@@ -16,15 +16,7 @@ defmodule StadiumWeb.LobbyChannel do
 
     Machina.GameAssigner.add_player(assigner, user_id)
 
-    # {:reply, {:ok, %{game_id: payload}}, socket}
     {:reply, {:ok, %{}}, socket}
-  end
-
-  # It is also common to receive messages from the client and
-  # broadcast to everyone in the current topic (lobby:lobby).
-  def handle_in("shout", payload, socket) do
-    broadcast socket, "shout", payload
-    {:noreply, socket}
   end
 
   defp find_or_create_game_assigner(scope) do
